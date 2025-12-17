@@ -13,5 +13,7 @@ Ultralytics YOLO with the BoT-SORT algorithm.
 
 ```bash
 pip install -r requirements.txt
+```
 
-Insert .mp4 file in the assets folder and replace the existing .mp4 file name from the video_path variable in the code
+- Insert .mp4 file in the assets folder and replace the existing .mp4 file name from the video_path variable in the code
+- I used this video file https://youtu.be/wqctLW0Hb_0
