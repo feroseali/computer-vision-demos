@@ -10,6 +10,14 @@ def __main__():
     video_path = "test_videos/Road-traffic-720p.mp4"
     cap = cv2.VideoCapture(video_path)
 
+    line_y_red = 430 # red line position
+
+    # To count the number of objects of each class
+    class_counts = defaultdict(int) 
+
+    # To store the ids of objects that have crossed the red line
+    crossed_ids = set() 
+
     # tracking video
     while cap.isOpened():
         ret, frame = cap.read()
@@ -17,7 +25,8 @@ def __main__():
             break
 
         # run yolo tracking on the frame, using BoT-SORT algorithm
-        results = model.track(frame, persist=True)
+        results = model.track(frame, persist=True, classes=[1,2,3,5,6,7])
+
 
         # print("results >>> ", results)
         if results[0].boxes.data is not None:
@@ -26,13 +35,33 @@ def __main__():
             track_ids = results[0].boxes.id.int().cpu().tolist()
             class_indices = results[0].boxes.cls.int().cpu().tolist()
             confidences = results[0].boxes.conf.cpu()
+
+            # draw incoming red zone
+            cv2.line(frame, (670, line_y_red), (1130, line_y_red), (0, 0, 255), 2)
             
             for box, track_id, class_idx, conf in zip(boxes, track_ids, class_indices, confidences):
                 x1, y1, x2, y2 = map(int, box)
+
+                # to find the center of x and y values of each object
+                x_center = (x1 + x2) // 2
+                y_center = (y1 + y2) // 2
+
                 class_name = class_names[class_idx]
-                cv2.putText(frame, f"ID: {track_id} {class_name}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 2)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 2)
+                cv2.circle(frame, (x_center, y_center), 1, (0,0,255), -1)
+                cv2.putText(frame, f"{class_name} ({track_id})", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 1)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 1)
+
+                # check if the object has crossed the red line
+                if y_center > line_y_red and track_id not in crossed_ids:
+                    crossed_ids.add(track_id)
+                    class_counts[class_name] += 1
                 
+            # display the counts on the frame
+            y_offset = 30    # space between each class count label
+            for class_name, count in class_counts.items():
+                cv2.putText(frame, f"{class_name}: {count}", (50, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
+                y_offset += 30
+        
         # draw the results on the frame
         cv2.imshow("Yolo Object Tracking & Counting", frame)
 
