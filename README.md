@@ -1,4 +1,4 @@
-# Vehicle Tracking using YOLO Object Tracking
+# Vehicle Tracker using YOLO 11
 
 This project demonstrates real-time vehicle detection and tracking using pretrained model
 Ultralytics YOLO with the BoT-SORT algorithm.
