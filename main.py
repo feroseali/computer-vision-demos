@@ -11,12 +11,15 @@ def __main__():
     cap = cv2.VideoCapture(video_path)
 
     line_y_red = 430 # red line position
+    line_x1 = 670
+    line_x2 = 1130
 
     # To count the number of objects of each class
     class_counts = defaultdict(int) 
 
     # To store the ids of objects that have crossed the red line
     crossed_ids = set() 
+    prev_positions = {}
 
     # tracking video
     while cap.isOpened():
@@ -37,24 +40,36 @@ def __main__():
             confidences = results[0].boxes.conf.cpu()
 
             # draw incoming red zone
-            cv2.line(frame, (670, line_y_red), (1130, line_y_red), (0, 0, 255), 2)
-            
+            cv2.line(frame, (line_x1, line_y_red), (line_x2, line_y_red), (0, 0, 255), 2)
+
             for box, track_id, class_idx, conf in zip(boxes, track_ids, class_indices, confidences):
                 x1, y1, x2, y2 = map(int, box)
 
                 # to find the center of x and y values of each object
                 x_center = (x1 + x2) // 2
                 y_center = (y1 + y2) // 2
-
                 class_name = class_names[class_idx]
+
+
+
                 cv2.circle(frame, (x_center, y_center), 1, (0,0,255), -1)
                 cv2.putText(frame, f"{class_name} ({track_id})", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,255), 1)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0,255,0), 1)
 
                 # check if the object has crossed the red line
-                if y_center > line_y_red and track_id not in crossed_ids:
-                    crossed_ids.add(track_id)
-                    class_counts[class_name] += 1
+                if track_id in prev_positions:
+                    prev_y = prev_positions[track_id]
+                    # Check for crossing from top to bottom:
+                    # Previous y was less than line_y (above) AND current y is greater or equal (below)
+                    # Also check if within x bounds of the line
+                    if prev_y < line_y_red and y_center >= line_y_red:
+                        if line_x1 < x_center < line_x2: # Check X bounds
+                            if track_id not in crossed_ids:
+                                crossed_ids.add(track_id)
+                                class_counts[class_name] += 1
+                
+                # Update previous position
+                prev_positions[track_id] = y_center
                 
             # display the counts on the frame
             y_offset = 30    # space between each class count label
